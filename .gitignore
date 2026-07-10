@@ -1,0 +1,6 @@
+node_modules/
+coverage/
+.env
+*.tgz
+package-lock.json
+icon.png
