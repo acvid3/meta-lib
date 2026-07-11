@@ -40,18 +40,8 @@ async function createMediaContainer(accessToken, igUserId, options) {
   })).id;
 }
 
-async function publishMedia(accessToken, igUserId, creationId, maxRetries = 30) {
-  // Wait for container to be ready
-  for (let i = 0; i < maxRetries; i++) {
-    const statusRes = await fetch(`${IG_API}/${creationId}?fields=status_code&access_token=${accessToken}`);
-    const statusData = await statusRes.json();
-    if (statusData.status_code === 'FINISHED') break;
-    if (statusData.status_code === 'ERROR') {
-      throw Object.assign(new Error('Media processing failed'), { response: { data: statusData } });
-    }
-    await _sleep(2000);
-    if (i === maxRetries - 1) throw new Error('Media processing timed out');
-  }
+async function publishMedia(accessToken, igUserId, creationId) {
+  await waitForContainer(accessToken, creationId);
 
   // Publish
   const res = await fetch(`${IG_API}/${igUserId}/media_publish`, {
@@ -78,7 +68,19 @@ async function postVideo(accessToken, igUserId, videoUrl, caption) {
   return { id: mediaId };
 }
 
+async function waitForContainer(accessToken, containerId, maxRetries = 30) {
+  for (let i = 0; i < maxRetries; i++) {
+    const res = await fetch(`${IG_API}/${containerId}?fields=status_code&access_token=${accessToken}`);
+    const data = await res.json();
+    if (data.status_code === 'FINISHED') return;
+    if (data.status_code === 'ERROR') throw new Error('Container processing failed');
+    await _sleep(2000);
+  }
+  throw new Error('Container processing timed out');
+}
+
 async function postCarousel(accessToken, igUserId, childrenIds, caption) {
+  await Promise.all(childrenIds.map(id => waitForContainer(accessToken, id)));
   const creationId = await createMediaContainer(accessToken, igUserId, { children: childrenIds, caption });
   const mediaId = await publishMedia(accessToken, igUserId, creationId);
   return { id: mediaId };
