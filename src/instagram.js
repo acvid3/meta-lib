@@ -36,7 +36,7 @@ async function createMediaContainer(accessToken, igUserId, options) {
   })).id;
 }
 
-async function publishMedia(accessToken, igUserId, creationId, maxRetries = 5) {
+async function publishMedia(accessToken, igUserId, creationId, maxRetries = 10) {
   for (let i = 0; i < maxRetries; i++) {
     const res = await fetch(`${IG_API}/${igUserId}/media_publish`, {
       method: 'POST',
