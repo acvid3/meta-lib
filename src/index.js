@@ -99,6 +99,7 @@ module.exports = {
   createPostWithImage,
   deletePost,
   // Instagram
+  createMediaContainer: instagram.createMediaContainer,
   postPhoto: instagram.postPhoto,
   postVideo: instagram.postVideo,
   postStoryPhoto: instagram.postStoryPhoto,
