@@ -96,23 +96,11 @@ async function createPost(accessToken, igUserId, items, options = {}) {
   return { id };
 }
 
-async function editProfile(accessToken, igUserId, updates) {
-  const params = { access_token: accessToken };
-  if (updates.biography !== undefined) params.biography = updates.biography;
-  if (updates.website !== undefined) params.website = updates.website;
-  await _request(`${IG_API}/${igUserId}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
-  });
-  return { success: true };
-}
-
 async function getMediaStatus(accessToken, mediaId) {
   return _request(`${IG_API}/${mediaId}?fields=id,media_type,media_url,permalink,caption,timestamp&access_token=${accessToken}`);
 }
 
 module.exports = {
   createPost,
-  editProfile,
   getMediaStatus,
 };
