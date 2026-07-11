@@ -88,10 +88,20 @@ async function getUserInfo(accessToken) {
   return data;
 }
 
+async function getInstagramBusinessAccount(accessToken, pageId) {
+  const res = await fetch(`${GRAPH_API}/${pageId}?fields=instagram_business_account{id,username,name}&access_token=${accessToken}`);
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    throw Object.assign(new Error(data.error?.message || 'Failed to get Instagram account'), { response: { status: res.status, data } });
+  }
+  return data.instagram_business_account;
+}
+
 module.exports = {
   getAuthorizationUrl,
   getAccessToken,
   getLongLivedToken,
   getPageAccessToken,
   getUserInfo,
+  getInstagramBusinessAccount,
 };

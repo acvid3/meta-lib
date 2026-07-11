@@ -22,6 +22,10 @@ function getUserInfo(accessToken) {
   return auth.getUserInfo(accessToken);
 }
 
+function getInstagramBusinessAccount(accessToken, pageId) {
+  return auth.getInstagramBusinessAccount(accessToken, pageId);
+}
+
 function createPost(accessToken, pageId, message, options) {
   return post.createPost(accessToken, pageId, message, options);
 }
@@ -40,6 +44,7 @@ module.exports = {
   getLongLivedToken,
   getPageAccessToken,
   getUserInfo,
+  getInstagramBusinessAccount,
   createPost,
   createPostWithImage,
   deletePost,
