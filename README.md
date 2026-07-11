@@ -17,7 +17,20 @@ INSTAGRAM_ACCESS_TOKEN=your_igaa_token
 IG_USER_ID=your_instagram_business_account_id
 ```
 
-Get token at https://developers.facebook.com/tools/debug/accesstoken/
+## Getting IG_USER_ID
+
+**With IGAA token (simplest):**
+
+```http
+GET https://graph.instagram.com/v21.0/me?fields=user_id,username
+```
+
+→ `{ "user_id": "17841480467485962" }` — это и есть IG_USER_ID.
+
+**With Facebook token:**
+
+1. `GET /me/accounts` → copy **Page ID**
+2. `GET /{page-id}?fields=instagram_business_account` → copy **id** from `instagram_business_account`
 
 ## Usage
 
