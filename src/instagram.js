@@ -75,14 +75,16 @@ async function createPost(accessToken, igUserId, items, options = {}) {
   }
 
   // Carousel (2+ items)
-  const childIds = await Promise.all(items.map(item =>
-    _createContainer(accessToken, igUserId, {
-      is_carousel_item: true,
-      access_token: accessToken,
-      image_url: item.imageUrl,
-      video_url: item.videoUrl,
-    })
-  ));
+  const childIds = await Promise.all(items.map(item => {
+    const p = { is_carousel_item: true, access_token: accessToken };
+    if (item.videoUrl) {
+      p.media_type = 'VIDEO';
+      p.video_url = item.videoUrl;
+    } else {
+      p.image_url = item.imageUrl;
+    }
+    return _createContainer(accessToken, igUserId, p);
+  }));
   await Promise.all(childIds.map(id => _waitForContainer(accessToken, id)));
   const carousel = await _createContainer(accessToken, igUserId, {
     media_type: 'CAROUSEL',
