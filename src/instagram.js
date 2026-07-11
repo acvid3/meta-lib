@@ -1,5 +1,8 @@
 const IG_API = 'https://graph.instagram.com/v21.0';
 
+const _POLL_INTERVAL = 5000;
+const _MAX_RETRIES = 36;
+
 function _sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
@@ -70,13 +73,13 @@ async function postVideo(accessToken, igUserId, videoUrl, caption) {
   return { id: mediaId };
 }
 
-async function waitForContainer(accessToken, containerId, maxRetries = 30) {
+async function waitForContainer(accessToken, containerId, maxRetries = _MAX_RETRIES) {
   for (let i = 0; i < maxRetries; i++) {
     const res = await fetch(`${IG_API}/${containerId}?fields=status_code&access_token=${accessToken}`);
     const data = await res.json();
     if (data.status_code === 'FINISHED') return;
     if (data.status_code === 'ERROR') throw new Error('Container processing failed');
-    await _sleep(2000);
+    await _sleep(_POLL_INTERVAL);
   }
   throw new Error('Container processing timed out');
 }
