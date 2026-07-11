@@ -105,5 +105,6 @@ module.exports = {
   postStoryPhoto: instagram.postStoryPhoto,
   postStoryVideo: instagram.postStoryVideo,
   postCarousel: instagram.postCarousel,
+  createCarouselPost: instagram.createCarouselPost,
   getMediaStatus: instagram.getMediaStatus,
 };

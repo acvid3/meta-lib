@@ -14,24 +14,26 @@ async function _request(url, options) {
 }
 
 async function createMediaContainer(accessToken, igUserId, options) {
-  const { imageUrl, videoUrl, caption, children, mediaType } = options;
+  const { imageUrl, videoUrl, caption, children, mediaType, isCarouselItem } = options;
 
   const params = { access_token: accessToken };
   if (caption) params.caption = caption;
 
-  if (mediaType) {
-    params.media_type = mediaType;
-    if (imageUrl) params.image_url = imageUrl;
-    if (videoUrl) params.video_url = videoUrl;
-  } else if (children) {
+  if (children) {
     params.media_type = 'CAROUSEL';
     params.children = children.join(',');
   } else if (videoUrl) {
-    params.media_type = 'REELS';
+    params.media_type = mediaType || 'REELS';
     params.video_url = videoUrl;
+  } else if (mediaType) {
+    params.media_type = mediaType;
+    if (imageUrl) params.image_url = imageUrl;
+    if (videoUrl) params.video_url = videoUrl;
   } else {
     params.image_url = imageUrl;
   }
+
+  if (isCarouselItem) params.is_carousel_item = true;
 
   return (await _request(`${IG_API}/${igUserId}/media`, {
     method: 'POST',
@@ -80,10 +82,17 @@ async function waitForContainer(accessToken, containerId, maxRetries = 30) {
 }
 
 async function postCarousel(accessToken, igUserId, childrenIds, caption) {
-  await Promise.all(childrenIds.map(id => waitForContainer(accessToken, id)));
   const creationId = await createMediaContainer(accessToken, igUserId, { children: childrenIds, caption });
   const mediaId = await publishMedia(accessToken, igUserId, creationId);
   return { id: mediaId };
+}
+
+async function createCarouselPost(accessToken, igUserId, items, caption) {
+  const ids = await Promise.all(items.map(item =>
+    createMediaContainer(accessToken, igUserId, { ...item, isCarouselItem: true })
+  ));
+  await Promise.all(ids.map(id => waitForContainer(accessToken, id)));
+  return postCarousel(accessToken, igUserId, ids, caption);
 }
 
 async function postStoryPhoto(accessToken, igUserId, imageUrl) {
@@ -108,7 +117,9 @@ module.exports = {
   postStoryPhoto,
   postStoryVideo,
   postCarousel,
+  createCarouselPost,
   getMediaStatus,
   createMediaContainer,
   publishMedia,
+  waitForContainer,
 };
