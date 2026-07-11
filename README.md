@@ -19,18 +19,12 @@ IG_USER_ID=your_instagram_business_account_id
 
 ## Getting Token & IG_USER_ID
 
+![Instagram Business API Setup](docs/images/instagram-business-setup.png)
+
 1. Open https://developers.facebook.com/apps/{YOUR_APP_ID}/instagram-business/API-Setup/
 2. Click **Generate token** and select required permissions (`instagram_basic`, `instagram_content_publish`)
 3. Copy the generated token → it's your `INSTAGRAM_ACCESS_TOKEN`
 4. In the same page you'll see `Instagram Account ID` → that's your `IG_USER_ID` (e.g. `17841480467485962`)
-
-**Or via API with existing token:**
-
-```http
-GET https://graph.instagram.com/v21.0/me?fields=user_id,username
-```
-
-→ `{ "user_id": "17841480467485962" }`
 
 ## Usage
 
