@@ -1,5 +1,6 @@
 const auth = require('./auth');
 const post = require('./post');
+const instagram = require('./instagram');
 
 /**
  * Build Facebook OAuth authorization URL. Redirect user here to authorize.
@@ -97,4 +98,9 @@ module.exports = {
   createPost,
   createPostWithImage,
   deletePost,
+  // Instagram
+  postPhoto: instagram.postPhoto,
+  postVideo: instagram.postVideo,
+  postCarousel: instagram.postCarousel,
+  getMediaStatus: instagram.getMediaStatus,
 };
