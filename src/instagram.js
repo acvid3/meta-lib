@@ -36,22 +36,30 @@ async function createMediaContainer(accessToken, igUserId, options) {
   })).id;
 }
 
-async function publishMedia(accessToken, igUserId, creationId, maxRetries = 10) {
+async function publishMedia(accessToken, igUserId, creationId, maxRetries = 30) {
+  // Wait for container to be ready
   for (let i = 0; i < maxRetries; i++) {
-    const res = await fetch(`${IG_API}/${igUserId}/media_publish`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ creation_id: creationId, access_token: accessToken }),
-    });
-    const data = await res.json();
-    if (res.ok && !data.error) return data.id;
-    if (data.error?.code === 9007 && i < maxRetries - 1) {
-      // Media not ready yet, wait and retry
-      await _sleep(3000);
-      continue;
+    const statusRes = await fetch(`${IG_API}/${creationId}?fields=status_code&access_token=${accessToken}`);
+    const statusData = await statusRes.json();
+    if (statusData.status_code === 'FINISHED') break;
+    if (statusData.status_code === 'ERROR') {
+      throw Object.assign(new Error('Media processing failed'), { response: { data: statusData } });
     }
+    await _sleep(2000);
+    if (i === maxRetries - 1) throw new Error('Media processing timed out');
+  }
+
+  // Publish
+  const res = await fetch(`${IG_API}/${igUserId}/media_publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creation_id: creationId, access_token: accessToken }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) {
     throw Object.assign(new Error(data.error?.message || 'Publish failed'), { response: { status: res.status, data } });
   }
+  return data.id;
 }
 
 async function postPhoto(accessToken, igUserId, imageUrl, caption) {
