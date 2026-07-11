@@ -1,6 +1,5 @@
 const IG_API = 'https://graph.instagram.com/v21.0';
-
-const _POLL_INTERVAL = 5000;
+const _POLL = 5000;
 const _MAX_RETRIES = 36;
 
 function _sleep(ms) {
@@ -16,131 +15,102 @@ async function _request(url, options) {
   return data;
 }
 
-async function createMediaContainer(accessToken, igUserId, options) {
-  const { imageUrl, videoUrl, caption, children, mediaType, isCarouselItem } = options;
-
-  const params = { access_token: accessToken };
-  if (caption) params.caption = caption;
-
-  if (children) {
-    params.media_type = 'CAROUSEL';
-    params.children = children.join(',');
-  } else if (videoUrl) {
-    params.media_type = mediaType || 'REELS';
-    params.video_url = videoUrl;
-  } else if (mediaType) {
-    params.media_type = mediaType;
-    if (imageUrl) params.image_url = imageUrl;
-    if (videoUrl) params.video_url = videoUrl;
-  } else {
-    params.image_url = imageUrl;
-  }
-
-  if (isCarouselItem) params.is_carousel_item = true;
-
+async function _createContainer(accessToken, igUserId, params) {
   return (await _request(`${IG_API}/${igUserId}/media`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   })).id;
 }
 
-async function publishMedia(accessToken, igUserId, creationId) {
-  await waitForContainer(accessToken, creationId);
-
-  // Publish
-  const res = await fetch(`${IG_API}/${igUserId}/media_publish`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ creation_id: creationId, access_token: accessToken }),
-  });
-  const data = await res.json();
-  if (!res.ok || data.error) {
-    throw Object.assign(new Error(data.error?.message || 'Publish failed'), { response: { status: res.status, data } });
-  }
-  return data.id;
-}
-
-async function postPhoto(accessToken, igUserId, imageUrl, caption) {
-  const creationId = await createMediaContainer(accessToken, igUserId, { imageUrl, caption });
-  const mediaId = await publishMedia(accessToken, igUserId, creationId);
-  return { id: mediaId };
-}
-
-async function postVideo(accessToken, igUserId, videoUrl, caption) {
-  const creationId = await createMediaContainer(accessToken, igUserId, { videoUrl, caption });
-  const mediaId = await publishMedia(accessToken, igUserId, creationId);
-  return { id: mediaId };
-}
-
-async function waitForContainer(accessToken, containerId, maxRetries = _MAX_RETRIES) {
-  for (let i = 0; i < maxRetries; i++) {
+async function _waitForContainer(accessToken, containerId) {
+  for (let i = 0; i < _MAX_RETRIES; i++) {
     const res = await fetch(`${IG_API}/${containerId}?fields=status_code&access_token=${accessToken}`);
     const data = await res.json();
     if (data.status_code === 'FINISHED') return;
     if (data.status_code === 'ERROR') throw new Error('Container processing failed');
-    await _sleep(_POLL_INTERVAL);
+    await _sleep(_POLL);
   }
   throw new Error('Container processing timed out');
 }
 
-async function postCarousel(accessToken, igUserId, childrenIds, caption) {
-  const creationId = await createMediaContainer(accessToken, igUserId, { children: childrenIds, caption });
-  const mediaId = await publishMedia(accessToken, igUserId, creationId);
-  return { id: mediaId };
+async function _publish(accessToken, igUserId, creationId) {
+  await _waitForContainer(accessToken, creationId);
+  return (await _request(`${IG_API}/${igUserId}/media_publish`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creation_id: creationId, access_token: accessToken }),
+  })).id;
 }
 
-async function createCarouselPost(accessToken, igUserId, items, caption) {
-  const ids = await Promise.all(items.map(item =>
-    createMediaContainer(accessToken, igUserId, { ...item, isCarouselItem: true })
+async function createPost(accessToken, igUserId, items, options = {}) {
+  const { caption, mediaType } = options;
+  const isFeed = !mediaType || mediaType === 'FEED';
+  const type = mediaType || 'FEED';
+
+  if (!Array.isArray(items)) items = [items];
+
+  if (type === 'STORIES') {
+    const item = items[0];
+    const media = await _createContainer(accessToken, igUserId, {
+      media_type: 'STORIES',
+      image_url: item.imageUrl,
+      video_url: item.videoUrl,
+      access_token: accessToken,
+    });
+    const id = await _publish(accessToken, igUserId, media);
+    return { id };
+  }
+
+  if (items.length === 1) {
+    const item = items[0];
+    const params = { access_token: accessToken, caption: caption || '' };
+    if (item.videoUrl) {
+      params.media_type = 'REELS';
+      params.video_url = item.videoUrl;
+    } else {
+      params.image_url = item.imageUrl;
+    }
+    const media = await _createContainer(accessToken, igUserId, params);
+    const id = await _publish(accessToken, igUserId, media);
+    return { id };
+  }
+
+  // Carousel (2+ items)
+  const childIds = await Promise.all(items.map(item =>
+    _createContainer(accessToken, igUserId, {
+      is_carousel_item: true,
+      access_token: accessToken,
+      image_url: item.imageUrl,
+      video_url: item.videoUrl,
+    })
   ));
-  await Promise.all(ids.map(id => waitForContainer(accessToken, id)));
-  return postCarousel(accessToken, igUserId, ids, caption);
-}
-
-async function postStoryPhoto(accessToken, igUserId, imageUrl) {
-  const creationId = await createMediaContainer(accessToken, igUserId, { imageUrl, mediaType: 'STORIES' });
-  const mediaId = await publishMedia(accessToken, igUserId, creationId);
-  return { id: mediaId };
-}
-
-async function postStoryVideo(accessToken, igUserId, videoUrl) {
-  const creationId = await createMediaContainer(accessToken, igUserId, { videoUrl, mediaType: 'STORIES' });
-  const mediaId = await publishMedia(accessToken, igUserId, creationId);
-  return { id: mediaId };
-}
-
-async function getMediaStatus(accessToken, mediaId) {
-  return _request(`${IG_API}/${mediaId}?fields=id,media_type,media_url,permalink,caption,timestamp&access_token=${accessToken}`);
+  await Promise.all(childIds.map(id => _waitForContainer(accessToken, id)));
+  const carousel = await _createContainer(accessToken, igUserId, {
+    media_type: 'CAROUSEL',
+    children: childIds.join(','),
+    caption: caption || '',
+    access_token: accessToken,
+  });
+  const id = await _publish(accessToken, igUserId, carousel);
+  return { id };
 }
 
 async function editProfile(accessToken, igUserId, updates) {
   const params = { access_token: accessToken };
   if (updates.biography !== undefined) params.biography = updates.biography;
   if (updates.website !== undefined) params.website = updates.website;
-
-  const res = await fetch(`${IG_API}/${igUserId}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  await _request(`${IG_API}/${igUserId}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
-  const data = await res.json();
-  if (!res.ok || data.error) {
-    throw Object.assign(new Error(data.error?.message || 'Edit profile failed'), { response: { status: res.status, data } });
-  }
   return { success: true };
 }
 
+async function getMediaStatus(accessToken, mediaId) {
+  return _request(`${IG_API}/${mediaId}?fields=id,media_type,media_url,permalink,caption,timestamp&access_token=${accessToken}`);
+}
+
 module.exports = {
-  postPhoto,
-  postVideo,
-  postStoryPhoto,
-  postStoryVideo,
-  postCarousel,
-  createCarouselPost,
-  getMediaStatus,
+  createPost,
   editProfile,
-  createMediaContainer,
-  publishMedia,
-  waitForContainer,
+  getMediaStatus,
 };
