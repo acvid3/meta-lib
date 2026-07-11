@@ -1,55 +1,42 @@
-const auth = require('./auth');
-const post = require('./post');
 const ig = require('./instagram');
 
-function getAuthorizationUrl(redirectUri, scope = 'pages_manage_posts,pages_read_engagement', state = '') {
-  return auth.getAuthorizationUrl(redirectUri, scope, state);
+/**
+ * Create an Instagram post (photo, video, carousel, story).
+ * @param {string} accessToken - Instagram access token (IGAA...).
+ * @param {string} igUserId - Instagram Business Account ID.
+ * @param {object[]} items - Array of media items: [{ imageUrl }] or [{ videoUrl }].
+ * @param {object} [options]
+ * @param {string} [options.caption] - Post caption.
+ * @param {'FEED'|'STORIES'} [options.mediaType='FEED'] - Post type.
+ * @returns {Promise<{id: string}>}
+ */
+function igPost(accessToken, igUserId, items, options) {
+  return ig.createPost(accessToken, igUserId, items, options);
 }
 
-function getAccessToken(code, redirectUri) {
-  return auth.getAccessToken(code, redirectUri);
+/**
+ * Edit Instagram profile (bio, website).
+ * @param {string} accessToken
+ * @param {string} igUserId
+ * @param {object} updates - { biography?, website? }
+ * @returns {Promise<{success: boolean}>}
+ */
+function igEditProfile(accessToken, igUserId, updates) {
+  return ig.editProfile(accessToken, igUserId, updates);
 }
 
-function getLongLivedToken(shortLivedToken) {
-  return auth.getLongLivedToken(shortLivedToken);
-}
-
-function getPageAccessToken(userAccessToken, pageId) {
-  return auth.getPageAccessToken(userAccessToken, pageId);
-}
-
-function getUserInfo(accessToken) {
-  return auth.getUserInfo(accessToken);
-}
-
-function getInstagramBusinessAccount(accessToken, pageId) {
-  return auth.getInstagramBusinessAccount(accessToken, pageId);
-}
-
-function createPost(accessToken, pageId, message, options) {
-  return post.createPost(accessToken, pageId, message, options);
-}
-
-function createPostWithImage(accessToken, pageId, message, imageBuffer, mimeType, options) {
-  return post.createPostWithImage(accessToken, pageId, message, imageBuffer, mimeType, options);
-}
-
-function deletePost(accessToken, pageId, postId) {
-  return post.deletePost(accessToken, pageId, postId);
+/**
+ * Get Instagram media status/info.
+ * @param {string} accessToken
+ * @param {string} mediaId
+ * @returns {Promise<object>}
+ */
+function igGetMediaStatus(accessToken, mediaId) {
+  return ig.getMediaStatus(accessToken, mediaId);
 }
 
 module.exports = {
-  getAuthorizationUrl,
-  getAccessToken,
-  getLongLivedToken,
-  getPageAccessToken,
-  getUserInfo,
-  getInstagramBusinessAccount,
-  createPost,
-  createPostWithImage,
-  deletePost,
-  // Instagram
-  igPost: ig.createPost,
-  igEditProfile: ig.editProfile,
-  igGetMediaStatus: ig.getMediaStatus,
+  igPost,
+  igEditProfile,
+  igGetMediaStatus,
 };
