@@ -14,12 +14,16 @@ async function _request(url, options) {
 }
 
 async function createMediaContainer(accessToken, igUserId, options) {
-  const { imageUrl, videoUrl, caption, children } = options;
+  const { imageUrl, videoUrl, caption, children, mediaType } = options;
 
   const params = { access_token: accessToken };
   if (caption) params.caption = caption;
 
-  if (children) {
+  if (mediaType) {
+    params.media_type = mediaType;
+    if (imageUrl) params.image_url = imageUrl;
+    if (videoUrl) params.video_url = videoUrl;
+  } else if (children) {
     params.media_type = 'CAROUSEL';
     params.children = children.join(',');
   } else if (videoUrl) {
@@ -80,6 +84,18 @@ async function postCarousel(accessToken, igUserId, childrenIds, caption) {
   return { id: mediaId };
 }
 
+async function postStoryPhoto(accessToken, igUserId, imageUrl) {
+  const creationId = await createMediaContainer(accessToken, igUserId, { imageUrl, mediaType: 'STORIES' });
+  const mediaId = await publishMedia(accessToken, igUserId, creationId);
+  return { id: mediaId };
+}
+
+async function postStoryVideo(accessToken, igUserId, videoUrl) {
+  const creationId = await createMediaContainer(accessToken, igUserId, { videoUrl, mediaType: 'STORIES' });
+  const mediaId = await publishMedia(accessToken, igUserId, creationId);
+  return { id: mediaId };
+}
+
 async function getMediaStatus(accessToken, mediaId) {
   return _request(`${IG_API}/${mediaId}?fields=id,media_type,media_url,permalink,caption,timestamp&access_token=${accessToken}`);
 }
@@ -87,6 +103,8 @@ async function getMediaStatus(accessToken, mediaId) {
 module.exports = {
   postPhoto,
   postVideo,
+  postStoryPhoto,
+  postStoryVideo,
   postCarousel,
   getMediaStatus,
   createMediaContainer,
