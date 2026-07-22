@@ -1,9 +1,11 @@
 const HttpClient = require('../utils/HttpClient');
+const Publisher = require('./Publisher');
 
 class FacebookClient {
     constructor(accessToken, pageId) {
         this.pageId = pageId;
         this.client = new HttpClient('https://graph.facebook.com/v25.0', accessToken);
+        this.publisher = new Publisher(this.client);
     }
 
     async createFeed(items, options = {}) {
@@ -12,19 +14,17 @@ class FacebookClient {
         if (link) body.link = link;
 
         if (Array.isArray(items) && items.length > 0) {
-            const urls = [];
+            const mediaIds = [];
             for (const item of items) {
                 if (item.imageUrl) {
                     const photo = await this.client.post(`/${this.pageId}/photos`, {
                         url: item.imageUrl,
                         published: false,
                     });
-                    urls.push(photo.id);
+                    mediaIds.push({ media_fbid: photo.id });
                 }
             }
-            if (urls.length > 0) {
-                body.attached_media = urls.map(id => ({ media_fbid: id }));
-            }
+            if (mediaIds.length > 0) body.attached_media = mediaIds;
         }
 
         const data = await this.client.post(`/${this.pageId}/feed`, body);
@@ -48,6 +48,7 @@ class FacebookClient {
         };
 
         const data = await this.client.post(`/${this.pageId}/videos`, body);
+        await this.publisher.waitForVideo(data.id);
         return { id: data.id };
     }
 
@@ -59,20 +60,21 @@ class FacebookClient {
                 file_url: item.videoUrl,
                 published: false,
             });
-            const data = await this.client.post(`/${this.pageId}/stories`, {
+            await this.publisher.waitForVideo(video.id);
+            const story = await this.client.post(`/${this.pageId}/stories`, {
                 video_id: video.id,
             });
-            return { id: data.id };
+            return { id: story.id };
         }
 
         const photo = await this.client.post(`/${this.pageId}/photos`, {
             url: item?.imageUrl,
             published: false,
         });
-        const data = await this.client.post(`/${this.pageId}/stories`, {
+        const story = await this.client.post(`/${this.pageId}/stories`, {
             image_id: photo.id,
         });
-        return { id: data.id };
+        return { id: story.id };
     }
 
     async getPostStatus(postId) {
