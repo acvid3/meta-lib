@@ -51,6 +51,30 @@ class FacebookClient {
         return { id: data.id };
     }
 
+    async createStories(items, options = {}) {
+        const item = Array.isArray(items) ? items[0] : items;
+
+        if (item?.videoUrl) {
+            const video = await this.client.post(`/${this.pageId}/videos`, {
+                file_url: item.videoUrl,
+                published: false,
+            });
+            const data = await this.client.post(`/${this.pageId}/stories`, {
+                video_id: video.id,
+            });
+            return { id: data.id };
+        }
+
+        const photo = await this.client.post(`/${this.pageId}/photos`, {
+            url: item?.imageUrl,
+            published: false,
+        });
+        const data = await this.client.post(`/${this.pageId}/stories`, {
+            image_id: photo.id,
+        });
+        return { id: data.id };
+    }
+
     async getPostStatus(postId) {
         return this.client.get(`/${postId}`, {
             fields: 'id,message,permalink_url,created_time,status',
