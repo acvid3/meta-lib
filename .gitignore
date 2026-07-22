@@ -4,3 +4,4 @@ coverage/
 *.tgz
 package-lock.json
 icon.png
+.DS_Store
