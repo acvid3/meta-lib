@@ -189,6 +189,61 @@ const info = await client.getPostStatus(postId);
 | `updatePagePicture(imageBuffer)` | Change profile picture (PNG buffer) |
 | `updatePageCover(imageBuffer, offsetY?)` | Change cover photo (PNG buffer) |
 
+## ThreadsClient
+
+Post text, images, and videos to Threads via Threads API (container-based, like Instagram).
+
+### Setup
+
+```env
+THREADS_ACCESS_TOKEN=your_token
+THREADS_USER_ID=your_threads_user_id
+```
+
+### Usage
+
+```js
+const { ThreadsClient } = require('meta-lib');
+const client = new ThreadsClient(process.env.THREADS_ACCESS_TOKEN, process.env.THREADS_USER_ID);
+```
+
+#### Text post
+
+```js
+const post = await client.createFeed([], { caption: 'Hello Threads!' });
+```
+
+#### Photo post
+
+```js
+const post = await client.createFeed(
+  [{ imageUrl: 'https://example.com/photo.jpg' }],
+  { caption: 'My photo' }
+);
+```
+
+#### Video post
+
+```js
+const post = await client.createFeed(
+  [{ videoUrl: 'https://example.com/video.mp4' }],
+  { caption: 'My video' }
+);
+```
+
+#### Get thread status
+
+```js
+const info = await client.getThreadStatus(threadId);
+```
+
+### API
+
+| Method | Description |
+|---|---|
+| `createFeed(items, options?)` | Post text, image, or video (container → publish) |
+| `getThreadStatus(threadId)` | Get thread details (id, text, media_type, permalink) |
+
 ## Media requirements
 
 Images must be publicly accessible URLs. Video format: MP4, H.264.
