@@ -1,6 +1,6 @@
 # meta-lib
 
-Instagram posting SDK. Publish photos, videos, carousels, and stories via Instagram Graph API.
+Meta SDK for Instagram and Facebook Content Publishing API.
 
 ## Install
 
@@ -8,82 +8,189 @@ Instagram posting SDK. Publish photos, videos, carousels, and stories via Instag
 npm i github:acvid3/meta-lib
 ```
 
-## Setup
+## InstagramClient
 
-Create `.env`:
+Publish photos, videos, reels, carousels, and stories via Instagram Graph API.
+
+### Setup
 
 ```env
-INSTAGRAM_ACCESS_TOKEN=your_igaa_token
+INSTAGRAM_ACCESS_TOKEN=your_token
 IG_USER_ID=your_instagram_business_account_id
 ```
 
-## Getting Token & IG_USER_ID
-
-![Instagram Business API Setup](docs/images/instagram-business-login.png)
-
-1. Open https://developers.facebook.com/apps/{YOUR_APP_ID}/instagram-business/API-Setup/
-2. Click **Generate token** and select required permissions (`instagram_basic`, `instagram_content_publish`)
-3. Copy the generated token → it's your `INSTAGRAM_ACCESS_TOKEN`
-4. In the same page you'll see `Instagram Account ID` → that's your `IG_USER_ID` (e.g. `17841480467485962`)
-
-## Usage
+### Usage
 
 ```js
-const { igPost, igGetMediaStatus } = require('meta-lib');
+const { InstagramClient } = require('meta-lib');
+const client = new InstagramClient(process.env.INSTAGRAM_ACCESS_TOKEN, process.env.IG_USER_ID);
 ```
 
-### Single photo
+#### Single photo
 
 ```js
-const post = await igPost(token, igUserId, [
-  { imageUrl: 'https://example.com/photo.jpg' }
-], { caption: 'My photo' });
+const post = await client.createFeed(
+  [{ imageUrl: 'https://example.com/photo.jpg' }],
+  { caption: 'My photo' }
+);
 ```
 
-### Single video (REELS)
+#### Single video (REELS)
 
 ```js
-const post = await igPost(token, igUserId, [
-  { videoUrl: 'https://example.com/video.mp4' }
-], { caption: 'My reel' });
+const post = await client.createFeed(
+  [{ videoUrl: 'https://example.com/video.mp4' }],
+  { caption: 'My reel' }
+);
 ```
 
-### Carousel (2-10 items)
+#### Carousel (2-10 items)
 
 ```js
-const post = await igPost(token, igUserId, [
+const post = await client.createFeed([
   { imageUrl: 'https://.../img1.jpg' },
   { imageUrl: 'https://.../img2.jpg' },
   { videoUrl: 'https://.../video.mp4' },
-], { caption: 'Carousel' });
+], { caption: 'My carousel' });
 ```
 
-### Story
+#### Reels
 
 ```js
-const story = await igPost(token, igUserId, [
-  { imageUrl: 'https://.../story.jpg' }
-], { mediaType: 'STORIES' });
+const post = await client.createReels(
+  [{ videoUrl: 'https://example.com/reel.mp4' }],
+  { caption: 'My reel' }
+);
 ```
 
-### Get media status
+#### Story (image)
 
 ```js
-const info = await igGetMediaStatus(token, mediaId);
+const post = await client.createStories(
+  [{ imageUrl: 'https://example.com/story.jpg' }]
+);
+```
+
+#### Get media status
+
+```js
+const info = await client.getMediaStatus(mediaId);
 // { media_type, permalink, caption, media_url, timestamp }
 ```
 
-## API
+### API
 
 | Method | Description |
 |---|---|
-| `igPost(token, igUserId, items, options?)` | Post photo, video, carousel, or story |
-| `igGetMediaStatus(token, mediaId)` | Get post info (permalink, type, etc.) |
+| `createFeed(items, options?)` | Post photo, video, or carousel (up to 10 items) |
+| `createReels(items, options?)` | Post a reel |
+| `createStories(items, options?)` | Post a story (image only) |
+| `getMediaStatus(mediaId)` | Get post info |
 
-`items` — array of `{ imageUrl }` or `{ videoUrl }`. Max 10 items for carousel.
+## FacebookClient
 
-`options.mediaType` — `'FEED'` (default) or `'STORIES'`.
+Publish feed posts, photos, videos, and stories on a Facebook Page.
 
-## Images
+### Setup
 
-Images must be publicly accessible URLs. The server uploads files to a free hosting before posting. Video format: MP4, H.264.
+```env
+FB_PAGE_ACCESS_TOKEN=your_page_token
+FB_PAGE_ID=your_page_id
+```
+
+### Usage
+
+```js
+const { FacebookClient } = require('meta-lib');
+const client = new FacebookClient(process.env.FB_PAGE_ACCESS_TOKEN, process.env.FB_PAGE_ID);
+```
+
+#### Feed post
+
+```js
+const post = await client.createFeed(
+  [],
+  { message: 'Hello world!' }
+);
+```
+
+#### Photo
+
+```js
+const post = await client.createPhoto(
+  [{ imageUrl: 'https://example.com/photo.jpg' }],
+  { caption: 'My photo' }
+);
+```
+
+#### Video
+
+```js
+const post = await client.createVideo(
+  [{ videoUrl: 'https://example.com/video.mp4' }],
+  { caption: 'My video' }
+);
+```
+
+#### Reels
+
+```js
+const post = await client.createReels(
+  [{ videoUrl: 'https://example.com/reel.mp4' }],
+  { caption: 'My reel' }
+);
+```
+
+#### Story (photo)
+
+```js
+const post = await client.createStories(
+  [{ imageUrl: 'https://example.com/story.jpg' }]
+);
+```
+
+#### Story (video)
+
+```js
+const post = await client.createStories(
+  [{ videoUrl: 'https://example.com/video.mp4' }]
+);
+```
+
+#### Get feed / Delete
+
+```js
+const feed = await client.getFeed(10);
+const r = await client.deletePost(postId);
+const stats = await client.deleteAllFeed(); // delete all feed posts
+```
+
+#### Get post status
+
+```js
+const info = await client.getPostStatus(postId);
+```
+
+### API
+
+| Method | Description |
+|---|---|
+| `createFeed(items, options?)` | Post to page feed with optional attached media |
+| `createPhoto(items, options?)` | Post a photo |
+| `createVideo(items, options?)` | Post a video (waits for processing) |
+| `createReels(items, options?)` | Post a reel (3-step resumable upload) |
+| `createStories(items, options?)` | Post a photo or video story |
+| `getFeed(limit?)` | Get recent feed posts |
+| `deletePost(postId)` | Delete a post/video/story |
+| `deleteAllFeed()` | Delete all feed posts |
+| `getPostStatus(postId)` | Get post details |
+| `getPageInfo()` | Get page name, about, description |
+| `updatePageInfo(fields)` | Update about, description, website, phone |
+| `updatePagePicture(imageBuffer)` | Change profile picture (PNG buffer) |
+| `updatePageCover(imageBuffer, offsetY?)` | Change cover photo (PNG buffer) |
+
+## Media requirements
+
+Images must be publicly accessible URLs. Video format: MP4, H.264.
+
+Facebook Stories video: 9:16, ≥540×960, 3–90s, H.264 + AAC.
